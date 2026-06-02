@@ -3,33 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gorillas Arcade Mobile - Gran Banana</title>
+    <title>Gorillas & Bananas Arcade</title>
     <style>
         * {
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
-        }
-        body {
             margin: 0;
             padding: 0;
-            background-color: #0000a8; /* Azul por defecto si no carga el fondo */
+        }
+        body {
+            background-color: #0000a8;
             color: #ffffff;
-            font-family: monospace;
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom); /* Evita cortes en iPhones/Android nuevos */
         }
         
+        /* Título Estilo Computador 80s */
+        #retro-header {
+            text-align: center;
+            background: #000;
+            border-bottom: 3px double #fff;
+            padding: 5px 0;
+        }
+        #retro-header h1 {
+            font-size: 20px;
+            color: #ffff54;
+            text-shadow: 2px 2px #a80000;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
         #hud {
             display: flex;
             justify-content: space-between;
-            padding: 10px 15px;
-            font-size: 16px;
-            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 12px;
+            font-size: 13px;
+            background: rgba(0, 0, 0, 0.7);
             font-weight: bold;
-            z-index: 10;
+            border-bottom: 1px solid #fff;
         }
 
         #canvas-container {
@@ -46,15 +62,15 @@
             background-position: bottom center;
         }
 
+        /* Panel de control más compacto y subido para evitar la barra del móvil */
         #controles-tactiles {
-            background: #111;
+            background: #000;
             border-top: 4px solid #fff;
-            padding: 15px;
+            padding: 10px 10px 20px 10px; /* Más margen abajo para empujar los botones hacia arriba */
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-            min-height: 160px;
-            z-index: 10;
+            grid-template-columns: 1fr 1.1fr 1fr;
+            gap: 10px;
+            min-height: 135px;
         }
 
         .columna-control {
@@ -62,36 +78,38 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
         }
 
         .label-control {
-            font-size: 14px;
+            font-size: 11px;
             text-transform: uppercase;
+            color: #a8a8a8;
             font-weight: bold;
         }
 
         .valor-control {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #ffff54;
         }
 
         .botones-ajuste {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             width: 100%;
         }
 
+        /* Botones un poco más estilizados y compactos */
         .btn-accion {
             flex: 1;
-            padding: 15px 0;
-            font-size: 24px;
+            padding: 10px 0;
+            font-size: 20px;
             font-weight: bold;
             background: #222;
             color: #fff;
-            border: 3px solid #fff;
-            border-radius: 8px;
+            border: 2px solid #fff;
+            border-radius: 6px;
             touch-action: manipulation;
         }
         .btn-accion:active {
@@ -99,29 +117,36 @@
             color: #000;
         }
 
+        /* Botón de fuego ligeramente más chico */
         .btn-fuego {
             width: 100%;
-            height: 100%;
+            height: 85%;
             background: #a80000;
             color: #fff;
-            border: 4px solid #fff;
-            border-radius: 12px;
-            font-size: 22px;
+            border: 3px solid #fff;
+            border-radius: 8px;
+            font-size: 16px;
             font-weight: bold;
             text-transform: uppercase;
             touch-action: manipulation;
+            box-shadow: inset -2px -2px #000;
         }
         .btn-fuego:active {
             background: #ffff54;
             color: #000;
+            box-shadow: none;
         }
     </style>
 </head>
 <body>
 
+    <div id="retro-header">
+        <h1>-- GORILAS & BANANAS --</h1>
+    </div>
+
     <div id="hud">
         <div id="intentos-txt">INTENTOS: ❤️❤️❤️</div>
-        <div id="status-txt">¡TOCA FUEGO PARA EMPEZAR!</div>
+        <div id="status-txt">AJUSTA ÁNGULO/VELOCIDAD Y ¡FUEGO!</div>
     </div>
 
     <div id="canvas-container">
@@ -157,7 +182,7 @@
         const ctx = canvas.getContext("2d");
         const container = document.getElementById("canvas-container");
 
-        // --- CONTEXTO DE AUDIO RETRO ---
+        // Audio del Navegador
         let audioCtx = null;
         function iniciarAudio() {
             if (!audioCtx) {
@@ -170,40 +195,37 @@
                 if (!audioCtx) return;
                 let osc = audioCtx.createOscillator();
                 let gain = audioCtx.createGain();
-                
                 osc.type = tipo;
                 osc.frequency.setValueAtTime(frecuenciaInicial, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(frecuenciaFinal, audioCtx.currentTime + duracion);
-                
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + duracion);
-                
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                
                 osc.start();
                 osc.stop(audioCtx.currentTime + duracion);
-            } catch(e) { console.log("Audio no soportado aún"); }
+            } catch(e) {}
         }
 
-        // --- CARGA DE IMÁGENES ---
+        // Imágenes
         const imgGorilaQuieto = new Image(); imgGorilaQuieto.src = 'gorila_quieto.png';
         const imgGorilaLanza = new Image(); imgGorilaLanza.src = 'gorila_lanza.png';
         const imgGorilaObjetivo = new Image(); imgGorilaObjetivo.src = 'gorila_objetivo.png';
         const imgBanana = new Image(); imgBanana.src = 'banana.png';
 
-        // Lógica de juego
+        // Lógica 
         let intentos = 3;
         let angulo = 45;
         let velocidad = 60;
         let edificios = [];
         
-        // Tamaños establecidos en 40x40
         let jugador = { x: 0, y: 0, ancho: 40, alto: 40, estado: 'quieto' };
         let objetivo = { x: 0, y: 0, ancho: 40, alto: 40 };
-        
         let banana = { x: 0, y: 0, vx: 0, vy: 0, activa: false, anguloRotacion: 0 };
         const gravedad = 0.15;
+
+        // Registro del último impacto para la marca visual
+        let ultimoImpacto = { x: null, y: null, visible: false };
 
         function redimensionarCanvas() {
             canvas.width = container.clientWidth;
@@ -220,7 +242,7 @@
 
             while (xActual < canvas.width) {
                 let anchoEdificio = Math.floor(Math.random() * (maxAncho - minAncho)) + minAncho;
-                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.45)) + (canvas.height * 0.2);
+                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.4)) + (canvas.height * 0.2);
                 
                 if (xActual + anchoEdificio > canvas.width) {
                     anchoEdificio = canvas.width - xActual;
@@ -249,18 +271,32 @@
         function dibujar() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Instrucción estilo marquesina impresa directamente en el cielo del canvas
+            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.font = "bold 12px monospace";
+            ctx.fillText("▲ APUNTAR: USA LOS BOTONES INFERIORES PARA CALIBRAR TU TIRO", 15, 25);
+
             // Dibujar edificios
-            ctx.fillStyle = "rgba(80, 80, 80, 0.85)";
+            ctx.fillStyle = "rgba(70, 70, 70, 0.9)";
             edificios.forEach(e => {
                 ctx.fillRect(e.x, e.y, e.ancho, e.alto);
             });
 
-            // Dibujar Gorila Jugador (Con respaldo geométrico si la imagen falla)
+            // Dibujar Marca del Último Impacto (Rectángulo Rojo de Referencia)
+            if (ultimoImpacto.visible) {
+                ctx.fillStyle = "#ff0000";
+                ctx.fillRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
+            }
+
+            // Dibujar Gorila Jugador
             let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
             if (imgActual.complete && imgActual.naturalWidth !== 0) {
                 ctx.drawImage(imgActual, jugador.x, jugador.y, jugador.ancho, jugador.alto);
             } else {
-                ctx.fillStyle = "#00a8a8"; // Bloque Cyan de respaldo
+                ctx.fillStyle = "#00a8a8";
                 ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
             }
 
@@ -268,20 +304,19 @@
             if (imgGorilaObjetivo.complete && imgGorilaObjetivo.naturalWidth !== 0) {
                 ctx.drawImage(imgGorilaObjetivo, objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
             } else {
-                ctx.fillStyle = "#a80000"; // Bloque Rojo de respaldo
+                ctx.fillStyle = "#a80000";
                 ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
             }
 
-            // Dibujar la Banana de 40x40
+            // Dibujar la Banana en vuelo (40x40)
             if (banana.activa) {
                 if (imgBanana.complete && imgBanana.naturalWidth !== 0) {
                     ctx.save();
                     ctx.translate(banana.x, banana.y);
                     ctx.rotate(banana.anguloRotacion);
-                    ctx.drawImage(imgBanana, -20, -20, 40, 40); // Centrada perfectamente en su eje
+                    ctx.drawImage(imgBanana, -20, -20, 40, 40);
                     ctx.restore();
                 } else {
-                    // Respaldo visual: Si no encuentra el PNG, dibuja un cuadrado amarillo grande rotando
                     ctx.save();
                     ctx.translate(banana.x, banana.y);
                     ctx.rotate(banana.anguloRotacion);
@@ -294,7 +329,7 @@
 
         function ajustar(tipo, valor) {
             iniciarAudio();
-            sonarRetro(400, 400, 0.05, 'triangle');
+            sonarRetro(400, 400, 0.04, 'triangle');
             if (tipo === 'angulo') {
                 angulo = Math.max(0, Math.min(90, angulo + valor));
                 document.getElementById("angulo-val").innerText = angulo + "°";
@@ -311,12 +346,11 @@
 
             banana.activa = true;
             jugador.estado = 'lanza';
-            document.getElementById("status-txt").innerText = "¡EN EL AIRE!";
+            document.getElementById("status-txt").innerText = "¡BANANA VOLANDO!";
             
-            sonarRetro(150, 600, 0.3, 'square');
+            sonarRetro(160, 580, 0.28, 'square');
 
             const radianes = (angulo * Math.PI) / 180;
-            // Ajuste de salida del proyectil
             banana.x = jugador.x + 20;
             banana.y = jugador.y - 10;
             
@@ -334,28 +368,38 @@
             banana.x += banana.vx;
             banana.vy += gravedad;
             banana.y += banana.vy;
-            
-            banana.anguloRotacion += 0.15;
+            banana.anguloRotacion += 0.18;
 
+            // Falla por salir del mapa lateral o inferior
             if (banana.x < 0 || banana.x > canvas.width || banana.y > canvas.height) {
+                ultimoImpacto.visible = false; // Fuera de rango, no se marca
                 procesarFallo();
                 return;
             }
 
+            // Impacto en el objetivo (Victoria)
             if (detectarColision(banana, objetivo)) {
-                sonarRetro(300, 60, 0.8, 'sawtooth');
-                document.getElementById("status-txt").innerText = "¡LE DISTE! GANASTE 🎉";
+                banana.activa = false; // CRITICO: Apaga la banana de inmediato para no bugearse
+                ultimoImpacto.visible = false;
+                sonarRetro(280, 50, 0.9, 'sawtooth');
+                document.getElementById("status-txt").innerText = "¡IMPACTO DIRECTO! VICTORIA 🎉";
+                
                 setTimeout(() => {
-                    intentos = 3;
-                    actualizarHUD();
-                    redimensionarCanvas(); 
+                    reiniciarTodoElJuego();
                 }, 2000);
                 return;
             }
 
+            // Colisión con edificios
             for (let e of edificios) {
                 if (banana.x > e.x && banana.x < e.x + e.ancho && banana.y > e.y) {
-                    sonarRetro(120, 40, 0.2, 'triangle');
+                    sonarRetro(110, 50, 0.18, 'triangle');
+                    
+                    // Almacenar el punto exacto del impacto en el edificio
+                    ultimoImpacto.x = banana.x;
+                    ultimoImpacto.y = banana.y;
+                    ultimoImpacto.visible = true;
+
                     procesarFallo();
                     return;
                 }
@@ -366,8 +410,7 @@
         }
 
         function detectarColision(b, obj) {
-            // Ajuste de rango de colisión considerando el centro de la banana de 40x40
-            return b.x > obj.x - 10 && b.x < obj.x + obj.ancho + 10 && b.y > obj.y - 10 && b.y < obj.y + obj.alto + 10;
+            return b.x > obj.x - 8 && b.x < obj.x + obj.ancho + 8 && b.y > obj.y - 8 && b.y < obj.y + obj.alto + 8;
         }
 
         function procesarFallo() {
@@ -377,17 +420,25 @@
             actualizarHUD();
 
             if (intentos <= 0) {
-                document.getElementById("status-txt").innerText = "¡GAME OVER! REINICIANDO...";
-                sonarRetro(100, 40, 1.0, 'square');
+                document.getElementById("status-txt").innerText = "¡GAME OVER! REGENERANDO MUNDO...";
+                sonarRetro(90, 45, 1.1, 'square');
                 setTimeout(() => {
-                    intentos = 3;
-                    actualizarHUD();
-                    redimensionarCanvas();
+                    reiniciarTodoElJuego();
                 }, 2000);
             } else {
-                document.getElementById("status-txt").innerText = "¡FALLASTE! INTENTA OTRA VEZ";
+                document.getElementById("status-txt").innerText = "¡FALLASTE! AJUSTA Y LANZA DE NUEVO";
                 dibujar();
             }
+        }
+
+        function reiniciarTodoElJuego() {
+            banana.activa = false;
+            jugador.estado = 'quieto';
+            intentos = 3;
+            ultimoImpacto.visible = false; // Limpia la marca anterior para la nueva ronda
+            actualizarHUD();
+            document.getElementById("status-txt").innerText = "¡NUEVA CIUDAD GENERADA! APUNTA";
+            redimensionarCanvas();
         }
 
         function actualizarHUD() {
@@ -401,16 +452,12 @@
         window.addEventListener('resize', redimensionarCanvas);
         window.addEventListener('orientationchange', () => setTimeout(redimensionarCanvas, 200));
 
-        // Detectar carga de imágenes de forma segura
-        function alCargarImagen() {
-            dibujar();
-        }
+        function alCargarImagen() { dibujar(); }
         imgGorilaQuieto.onload = alCargarImagen;
         imgGorilaLanza.onload = alCargarImagen;
         imgGorilaObjetivo.onload = alCargarImagen;
         imgBanana.onload = alCargarImagen;
 
-        // Iniciar de inmediato
         redimensionarCanvas();
     </script>
 </body>
