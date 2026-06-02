@@ -13,7 +13,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #000;
+            background-color: #0000a8; /* Azul por defecto si no carga el fondo */
             color: #ffffff;
             font-family: monospace;
             display: flex;
@@ -121,4 +121,297 @@
 
     <div id="hud">
         <div id="intentos-txt">INTENTOS: ❤️❤️❤️</div>
-        <div id="status-txt">¡TOCA FUEGO PARA EMPEZAR!http://googleusercontent.com/image_generation_content/0
+        <div id="status-txt">¡TOCA FUEGO PARA EMPEZAR!</div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="controles-tactiles">
+        <div class="columna-control">
+            <div class="label-control">Ángulo</div>
+            <div id="angulo-val" class="valor-control">45°</div>
+            <div class="botones-ajuste">
+                <button class="btn-accion" onclick="ajustar('angulo', -5)">-</button>
+                <button class="btn-accion" onclick="ajustar('angulo', 5)">+</button>
+            </div>
+        </div>
+
+        <div class="columna-control">
+            <button class="btn-fuego" onclick="lanzarBanana()">¡FUEGO!</button>
+        </div>
+
+        <div class="columna-control">
+            <div class="label-control">Velocidad</div>
+            <div id="velocidad-val" class="valor-control">60</div>
+            <div class="botones-ajuste">
+                <button class="btn-accion" onclick="ajustar('velocidad', -5)">-</button>
+                <button class="btn-accion" onclick="ajustar('velocidad', 5)">+</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const container = document.getElementById("canvas-container");
+
+        // --- CONTEXTO DE AUDIO RETRO ---
+        let audioCtx = null;
+        function iniciarAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function sonarRetro(frecuenciaInicial, frecuenciaFinal, duracion, tipo = 'square') {
+            try {
+                if (!audioCtx) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                
+                osc.type = tipo;
+                osc.frequency.setValueAtTime(frecuenciaInicial, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(frecuenciaFinal, audioCtx.currentTime + duracion);
+                
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + duracion);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + duracion);
+            } catch(e) { console.log("Audio no soportado aún"); }
+        }
+
+        // --- CARGA DE IMÁGENES ---
+        const imgGorilaQuieto = new Image(); imgGorilaQuieto.src = 'gorila_quieto.png';
+        const imgGorilaLanza = new Image(); imgGorilaLanza.src = 'gorila_lanza.png';
+        const imgGorilaObjetivo = new Image(); imgGorilaObjetivo.src = 'gorila_objetivo.png';
+        const imgBanana = new Image(); imgBanana.src = 'banana.png';
+
+        // Lógica de juego
+        let intentos = 3;
+        let angulo = 45;
+        let velocidad = 60;
+        let edificios = [];
+        
+        // Tamaños establecidos en 40x40
+        let jugador = { x: 0, y: 0, ancho: 40, alto: 40, estado: 'quieto' };
+        let objetivo = { x: 0, y: 0, ancho: 40, alto: 40 };
+        
+        let banana = { x: 0, y: 0, vx: 0, vy: 0, activa: false, anguloRotacion: 0 };
+        const gravedad = 0.15;
+
+        function redimensionarCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            generarCiudad();
+            dibujar();
+        }
+
+        function generarCiudad() {
+            edificios = [];
+            let xActual = 0;
+            const minAncho = 60;
+            const maxAncho = 100;
+
+            while (xActual < canvas.width) {
+                let anchoEdificio = Math.floor(Math.random() * (maxAncho - minAncho)) + minAncho;
+                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.45)) + (canvas.height * 0.2);
+                
+                if (xActual + anchoEdificio > canvas.width) {
+                    anchoEdificio = canvas.width - xActual;
+                }
+
+                edificios.push({
+                    x: xActual,
+                    y: canvas.height - altoEdificio,
+                    ancho: anchoEdificio,
+                    alto: altoEdificio
+                });
+                xActual += anchoEdificio;
+            }
+
+            if(edificios.length > 3) {
+                let eJugador = edificios[1];
+                jugador.x = eJugador.x + (eJugador.ancho / 2) - 20;
+                jugador.y = eJugador.y - 40;
+
+                let eObjetivo = edificios[edificios.length - 2];
+                objetivo.x = eObjetivo.x + (eObjetivo.ancho / 2) - 20;
+                objetivo.y = eObjetivo.y - 40;
+            }
+        }
+
+        function dibujar() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar edificios
+            ctx.fillStyle = "rgba(80, 80, 80, 0.85)";
+            edificios.forEach(e => {
+                ctx.fillRect(e.x, e.y, e.ancho, e.alto);
+            });
+
+            // Dibujar Gorila Jugador (Con respaldo geométrico si la imagen falla)
+            let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
+            if (imgActual.complete && imgActual.naturalWidth !== 0) {
+                ctx.drawImage(imgActual, jugador.x, jugador.y, jugador.ancho, jugador.alto);
+            } else {
+                ctx.fillStyle = "#00a8a8"; // Bloque Cyan de respaldo
+                ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
+            }
+
+            // Dibujar Gorila Objetivo
+            if (imgGorilaObjetivo.complete && imgGorilaObjetivo.naturalWidth !== 0) {
+                ctx.drawImage(imgGorilaObjetivo, objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
+            } else {
+                ctx.fillStyle = "#a80000"; // Bloque Rojo de respaldo
+                ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
+            }
+
+            // Dibujar la Banana de 40x40
+            if (banana.activa) {
+                if (imgBanana.complete && imgBanana.naturalWidth !== 0) {
+                    ctx.save();
+                    ctx.translate(banana.x, banana.y);
+                    ctx.rotate(banana.anguloRotacion);
+                    ctx.drawImage(imgBanana, -20, -20, 40, 40); // Centrada perfectamente en su eje
+                    ctx.restore();
+                } else {
+                    // Respaldo visual: Si no encuentra el PNG, dibuja un cuadrado amarillo grande rotando
+                    ctx.save();
+                    ctx.translate(banana.x, banana.y);
+                    ctx.rotate(banana.anguloRotacion);
+                    ctx.fillStyle = "#ffff54";
+                    ctx.fillRect(-20, -20, 40, 40);
+                    ctx.restore();
+                }
+            }
+        }
+
+        function ajustar(tipo, valor) {
+            iniciarAudio();
+            sonarRetro(400, 400, 0.05, 'triangle');
+            if (tipo === 'angulo') {
+                angulo = Math.max(0, Math.min(90, angulo + valor));
+                document.getElementById("angulo-val").innerText = angulo + "°";
+            } else if (tipo === 'velocidad') {
+                velocidad = Math.max(10, Math.min(120, velocidad + valor));
+                document.getElementById("velocidad-val").innerText = velocidad;
+            }
+            dibujar();
+        }
+
+        function lanzarBanana() {
+            if (banana.activa) return;
+            iniciarAudio();
+
+            banana.activa = true;
+            jugador.estado = 'lanza';
+            document.getElementById("status-txt").innerText = "¡EN EL AIRE!";
+            
+            sonarRetro(150, 600, 0.3, 'square');
+
+            const radianes = (angulo * Math.PI) / 180;
+            // Ajuste de salida del proyectil
+            banana.x = jugador.x + 20;
+            banana.y = jugador.y - 10;
+            
+            const escalaFisica = canvas.width * 0.00025;
+            banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
+            banana.vy = -Math.sin(radianes) * velocidad * escalaFisica;
+            banana.anguloRotacion = 0;
+
+            actualizarFisica();
+        }
+
+        function actualizarFisica() {
+            if (!banana.activa) return;
+
+            banana.x += banana.vx;
+            banana.vy += gravedad;
+            banana.y += banana.vy;
+            
+            banana.anguloRotacion += 0.15;
+
+            if (banana.x < 0 || banana.x > canvas.width || banana.y > canvas.height) {
+                procesarFallo();
+                return;
+            }
+
+            if (detectarColision(banana, objetivo)) {
+                sonarRetro(300, 60, 0.8, 'sawtooth');
+                document.getElementById("status-txt").innerText = "¡LE DISTE! GANASTE 🎉";
+                setTimeout(() => {
+                    intentos = 3;
+                    actualizarHUD();
+                    redimensionarCanvas(); 
+                }, 2000);
+                return;
+            }
+
+            for (let e of edificios) {
+                if (banana.x > e.x && banana.x < e.x + e.ancho && banana.y > e.y) {
+                    sonarRetro(120, 40, 0.2, 'triangle');
+                    procesarFallo();
+                    return;
+                }
+            }
+
+            dibujar();
+            requestAnimationFrame(actualizarFisica);
+        }
+
+        function detectarColision(b, obj) {
+            // Ajuste de rango de colisión considerando el centro de la banana de 40x40
+            return b.x > obj.x - 10 && b.x < obj.x + obj.ancho + 10 && b.y > obj.y - 10 && b.y < obj.y + obj.alto + 10;
+        }
+
+        function procesarFallo() {
+            banana.activa = false;
+            jugador.estado = 'quieto';
+            intentos--;
+            actualizarHUD();
+
+            if (intentos <= 0) {
+                document.getElementById("status-txt").innerText = "¡GAME OVER! REINICIANDO...";
+                sonarRetro(100, 40, 1.0, 'square');
+                setTimeout(() => {
+                    intentos = 3;
+                    actualizarHUD();
+                    redimensionarCanvas();
+                }, 2000);
+            } else {
+                document.getElementById("status-txt").innerText = "¡FALLASTE! INTENTA OTRA VEZ";
+                dibujar();
+            }
+        }
+
+        function actualizarHUD() {
+            let corazones = "";
+            for(let i=0; i<3; i++) {
+                corazones += (i < intentos) ? "❤️" : "🖤";
+            }
+            document.getElementById("intentos-txt").innerText = `INTENTOS: ${corazones}`;
+        }
+
+        window.addEventListener('resize', redimensionarCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(redimensionarCanvas, 200));
+
+        // Detectar carga de imágenes de forma segura
+        function alCargarImagen() {
+            dibujar();
+        }
+        imgGorilaQuieto.onload = alCargarImagen;
+        imgGorilaLanza.onload = alCargarImagen;
+        imgGorilaObjetivo.onload = alCargarImagen;
+        imgBanana.onload = alCargarImagen;
+
+        // Iniciar de inmediato
+        redimensionarCanvas();
+    </script>
+</body>
+</html>
