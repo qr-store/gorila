@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gorillas & Bananas Arcade</title>
+    <title>Gorillas & Bananas por LeoClates</title>
     <style>
         * {
             box-sizing: border-box;
@@ -20,30 +20,40 @@
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
-            padding-bottom: env(safe-area-inset-bottom); /* Evita cortes en iPhones/Android nuevos */
+            padding-bottom: env(safe-area-inset-bottom);
         }
         
-        /* Título Estilo Computador 80s */
+        /* Encabezado Responsivo: Se adapta perfecto en vertical y horizontal */
         #retro-header {
-            text-align: center;
             background: #000;
             border-bottom: 3px double #fff;
-            padding: 5px 0;
+            padding: 6px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
         }
         #retro-header h1 {
-            font-size: 20px;
+            font-size: 18px;
             color: #ffff54;
             text-shadow: 2px 2px #a80000;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             font-weight: bold;
+        }
+        #retro-header .credito {
+            font-size: 11px;
+            color: #54ffff;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
 
         #hud {
             display: flex;
             justify-content: space-between;
             padding: 6px 12px;
-            font-size: 13px;
-            background: rgba(0, 0, 0, 0.7);
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.8);
             font-weight: bold;
             border-bottom: 1px solid #fff;
         }
@@ -62,15 +72,15 @@
             background-position: bottom center;
         }
 
-        /* Panel de control más compacto y subido para evitar la barra del móvil */
         #controles-tactiles {
             background: #000;
             border-top: 4px solid #fff;
-            padding: 10px 10px 20px 10px; /* Más margen abajo para empujar los botones hacia arriba */
+            padding: 10px 10px 20px 10px;
             display: grid;
             grid-template-columns: 1fr 1.1fr 1fr;
             gap: 10px;
             min-height: 135px;
+            z-index: 10;
         }
 
         .columna-control {
@@ -100,365 +110,6 @@
             width: 100%;
         }
 
-        /* Botones un poco más estilizados y compactos */
         .btn-accion {
             flex: 1;
             padding: 10px 0;
-            font-size: 20px;
-            font-weight: bold;
-            background: #222;
-            color: #fff;
-            border: 2px solid #fff;
-            border-radius: 6px;
-            touch-action: manipulation;
-        }
-        .btn-accion:active {
-            background: #fff;
-            color: #000;
-        }
-
-        /* Botón de fuego ligeramente más chico */
-        .btn-fuego {
-            width: 100%;
-            height: 85%;
-            background: #a80000;
-            color: #fff;
-            border: 3px solid #fff;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            touch-action: manipulation;
-            box-shadow: inset -2px -2px #000;
-        }
-        .btn-fuego:active {
-            background: #ffff54;
-            color: #000;
-            box-shadow: none;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="retro-header">
-        <h1>-- GORILAS & BANANAS --</h1>
-    </div>
-
-    <div id="hud">
-        <div id="intentos-txt">INTENTOS: ❤️❤️❤️</div>
-        <div id="status-txt">AJUSTA ÁNGULO/VELOCIDAD Y ¡FUEGO!</div>
-    </div>
-
-    <div id="canvas-container">
-        <canvas id="gameCanvas"></canvas>
-    </div>
-
-    <div id="controles-tactiles">
-        <div class="columna-control">
-            <div class="label-control">Ángulo</div>
-            <div id="angulo-val" class="valor-control">45°</div>
-            <div class="botones-ajuste">
-                <button class="btn-accion" onclick="ajustar('angulo', -5)">-</button>
-                <button class="btn-accion" onclick="ajustar('angulo', 5)">+</button>
-            </div>
-        </div>
-
-        <div class="columna-control">
-            <button class="btn-fuego" onclick="lanzarBanana()">¡FUEGO!</button>
-        </div>
-
-        <div class="columna-control">
-            <div class="label-control">Velocidad</div>
-            <div id="velocidad-val" class="valor-control">60</div>
-            <div class="botones-ajuste">
-                <button class="btn-accion" onclick="ajustar('velocidad', -5)">-</button>
-                <button class="btn-accion" onclick="ajustar('velocidad', 5)">+</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const container = document.getElementById("canvas-container");
-
-        // Audio del Navegador
-        let audioCtx = null;
-        function iniciarAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        function sonarRetro(frecuenciaInicial, frecuenciaFinal, duracion, tipo = 'square') {
-            try {
-                if (!audioCtx) return;
-                let osc = audioCtx.createOscillator();
-                let gain = audioCtx.createGain();
-                osc.type = tipo;
-                osc.frequency.setValueAtTime(frecuenciaInicial, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(frecuenciaFinal, audioCtx.currentTime + duracion);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + duracion);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duracion);
-            } catch(e) {}
-        }
-
-        // Imágenes
-        const imgGorilaQuieto = new Image(); imgGorilaQuieto.src = 'gorila_quieto.png';
-        const imgGorilaLanza = new Image(); imgGorilaLanza.src = 'gorila_lanza.png';
-        const imgGorilaObjetivo = new Image(); imgGorilaObjetivo.src = 'gorila_objetivo.png';
-        const imgBanana = new Image(); imgBanana.src = 'banana.png';
-
-        // Lógica 
-        let intentos = 3;
-        let angulo = 45;
-        let velocidad = 60;
-        let edificios = [];
-        
-        let jugador = { x: 0, y: 0, ancho: 40, alto: 40, estado: 'quieto' };
-        let objetivo = { x: 0, y: 0, ancho: 40, alto: 40 };
-        let banana = { x: 0, y: 0, vx: 0, vy: 0, activa: false, anguloRotacion: 0 };
-        const gravedad = 0.15;
-
-        // Registro del último impacto para la marca visual
-        let ultimoImpacto = { x: null, y: null, visible: false };
-
-        function redimensionarCanvas() {
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-            generarCiudad();
-            dibujar();
-        }
-
-        function generarCiudad() {
-            edificios = [];
-            let xActual = 0;
-            const minAncho = 60;
-            const maxAncho = 100;
-
-            while (xActual < canvas.width) {
-                let anchoEdificio = Math.floor(Math.random() * (maxAncho - minAncho)) + minAncho;
-                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.4)) + (canvas.height * 0.2);
-                
-                if (xActual + anchoEdificio > canvas.width) {
-                    anchoEdificio = canvas.width - xActual;
-                }
-
-                edificios.push({
-                    x: xActual,
-                    y: canvas.height - altoEdificio,
-                    ancho: anchoEdificio,
-                    alto: altoEdificio
-                });
-                xActual += anchoEdificio;
-            }
-
-            if(edificios.length > 3) {
-                let eJugador = edificios[1];
-                jugador.x = eJugador.x + (eJugador.ancho / 2) - 20;
-                jugador.y = eJugador.y - 40;
-
-                let eObjetivo = edificios[edificios.length - 2];
-                objetivo.x = eObjetivo.x + (eObjetivo.ancho / 2) - 20;
-                objetivo.y = eObjetivo.y - 40;
-            }
-        }
-
-        function dibujar() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Instrucción estilo marquesina impresa directamente en el cielo del canvas
-            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-            ctx.font = "bold 12px monospace";
-            ctx.fillText("▲ APUNTAR: USA LOS BOTONES INFERIORES PARA CALIBRAR TU TIRO", 15, 25);
-
-            // Dibujar edificios
-            ctx.fillStyle = "rgba(70, 70, 70, 0.9)";
-            edificios.forEach(e => {
-                ctx.fillRect(e.x, e.y, e.ancho, e.alto);
-            });
-
-            // Dibujar Marca del Último Impacto (Rectángulo Rojo de Referencia)
-            if (ultimoImpacto.visible) {
-                ctx.fillStyle = "#ff0000";
-                ctx.fillRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
-                ctx.strokeStyle = "#ffffff";
-                ctx.lineWidth = 1;
-                ctx.strokeRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
-            }
-
-            // Dibujar Gorila Jugador
-            let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
-            if (imgActual.complete && imgActual.naturalWidth !== 0) {
-                ctx.drawImage(imgActual, jugador.x, jugador.y, jugador.ancho, jugador.alto);
-            } else {
-                ctx.fillStyle = "#00a8a8";
-                ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
-            }
-
-            // Dibujar Gorila Objetivo
-            if (imgGorilaObjetivo.complete && imgGorilaObjetivo.naturalWidth !== 0) {
-                ctx.drawImage(imgGorilaObjetivo, objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
-            } else {
-                ctx.fillStyle = "#a80000";
-                ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
-            }
-
-            // Dibujar la Banana en vuelo (40x40)
-            if (banana.activa) {
-                if (imgBanana.complete && imgBanana.naturalWidth !== 0) {
-                    ctx.save();
-                    ctx.translate(banana.x, banana.y);
-                    ctx.rotate(banana.anguloRotacion);
-                    ctx.drawImage(imgBanana, -20, -20, 40, 40);
-                    ctx.restore();
-                } else {
-                    ctx.save();
-                    ctx.translate(banana.x, banana.y);
-                    ctx.rotate(banana.anguloRotacion);
-                    ctx.fillStyle = "#ffff54";
-                    ctx.fillRect(-20, -20, 40, 40);
-                    ctx.restore();
-                }
-            }
-        }
-
-        function ajustar(tipo, valor) {
-            iniciarAudio();
-            sonarRetro(400, 400, 0.04, 'triangle');
-            if (tipo === 'angulo') {
-                angulo = Math.max(0, Math.min(90, angulo + valor));
-                document.getElementById("angulo-val").innerText = angulo + "°";
-            } else if (tipo === 'velocidad') {
-                velocidad = Math.max(10, Math.min(120, velocidad + valor));
-                document.getElementById("velocidad-val").innerText = velocidad;
-            }
-            dibujar();
-        }
-
-        function lanzarBanana() {
-            if (banana.activa) return;
-            iniciarAudio();
-
-            banana.activa = true;
-            jugador.estado = 'lanza';
-            document.getElementById("status-txt").innerText = "¡BANANA VOLANDO!";
-            
-            sonarRetro(160, 580, 0.28, 'square');
-
-            const radianes = (angulo * Math.PI) / 180;
-            banana.x = jugador.x + 20;
-            banana.y = jugador.y - 10;
-            
-            const escalaFisica = canvas.width * 0.00025;
-            banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
-            banana.vy = -Math.sin(radianes) * velocidad * escalaFisica;
-            banana.anguloRotacion = 0;
-
-            actualizarFisica();
-        }
-
-        function actualizarFisica() {
-            if (!banana.activa) return;
-
-            banana.x += banana.vx;
-            banana.vy += gravedad;
-            banana.y += banana.vy;
-            banana.anguloRotacion += 0.18;
-
-            // Falla por salir del mapa lateral o inferior
-            if (banana.x < 0 || banana.x > canvas.width || banana.y > canvas.height) {
-                ultimoImpacto.visible = false; // Fuera de rango, no se marca
-                procesarFallo();
-                return;
-            }
-
-            // Impacto en el objetivo (Victoria)
-            if (detectarColision(banana, objetivo)) {
-                banana.activa = false; // CRITICO: Apaga la banana de inmediato para no bugearse
-                ultimoImpacto.visible = false;
-                sonarRetro(280, 50, 0.9, 'sawtooth');
-                document.getElementById("status-txt").innerText = "¡IMPACTO DIRECTO! VICTORIA 🎉";
-                
-                setTimeout(() => {
-                    reiniciarTodoElJuego();
-                }, 2000);
-                return;
-            }
-
-            // Colisión con edificios
-            for (let e of edificios) {
-                if (banana.x > e.x && banana.x < e.x + e.ancho && banana.y > e.y) {
-                    sonarRetro(110, 50, 0.18, 'triangle');
-                    
-                    // Almacenar el punto exacto del impacto en el edificio
-                    ultimoImpacto.x = banana.x;
-                    ultimoImpacto.y = banana.y;
-                    ultimoImpacto.visible = true;
-
-                    procesarFallo();
-                    return;
-                }
-            }
-
-            dibujar();
-            requestAnimationFrame(actualizarFisica);
-        }
-
-        function detectarColision(b, obj) {
-            return b.x > obj.x - 8 && b.x < obj.x + obj.ancho + 8 && b.y > obj.y - 8 && b.y < obj.y + obj.alto + 8;
-        }
-
-        function procesarFallo() {
-            banana.activa = false;
-            jugador.estado = 'quieto';
-            intentos--;
-            actualizarHUD();
-
-            if (intentos <= 0) {
-                document.getElementById("status-txt").innerText = "¡GAME OVER! REGENERANDO MUNDO...";
-                sonarRetro(90, 45, 1.1, 'square');
-                setTimeout(() => {
-                    reiniciarTodoElJuego();
-                }, 2000);
-            } else {
-                document.getElementById("status-txt").innerText = "¡FALLASTE! AJUSTA Y LANZA DE NUEVO";
-                dibujar();
-            }
-        }
-
-        function reiniciarTodoElJuego() {
-            banana.activa = false;
-            jugador.estado = 'quieto';
-            intentos = 3;
-            ultimoImpacto.visible = false; // Limpia la marca anterior para la nueva ronda
-            actualizarHUD();
-            document.getElementById("status-txt").innerText = "¡NUEVA CIUDAD GENERADA! APUNTA";
-            redimensionarCanvas();
-        }
-
-        function actualizarHUD() {
-            let corazones = "";
-            for(let i=0; i<3; i++) {
-                corazones += (i < intentos) ? "❤️" : "🖤";
-            }
-            document.getElementById("intentos-txt").innerText = `INTENTOS: ${corazones}`;
-        }
-
-        window.addEventListener('resize', redimensionarCanvas);
-        window.addEventListener('orientationchange', () => setTimeout(redimensionarCanvas, 200));
-
-        function alCargarImagen() { dibujar(); }
-        imgGorilaQuieto.onload = alCargarImagen;
-        imgGorilaLanza.onload = alCargarImagen;
-        imgGorilaObjetivo.onload = alCargarImagen;
-        imgBanana.onload = alCargarImagen;
-
-        redimensionarCanvas();
-    </script>
-</body>
-</html>
