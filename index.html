@@ -197,7 +197,7 @@
 
         <div class="columna-control">
             <div class="label-control">Velocidad</div>
-            <div id="velocidad-val" class="valor-control">60</div>
+            <div id="velocidad-val" class="valor-control">40</div>
             <div class="botones-ajuste">
                 <button class="btn-accion" onclick="ajustar('velocidad', -5)">-</button>
                 <button class="btn-accion" onclick="ajustar('velocidad', 5)">+</button>
@@ -244,7 +244,7 @@
 
         let intentos = 5;
         let angulo = 45;
-        let velocidad = 60;
+        let velocidad = 40; // NUEVO: Arranca en 40 para un ajuste inicial más suave
         let edificios = [];
         let bloqueado = false;
         
@@ -327,20 +327,21 @@
                 ctx.strokeRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
             }
 
-            // CORREGIDO: El dibujo de los gorilas ahora es forzado e inmediato
+            // Jugador
             let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
             if (imgActual.complete && imgActual.naturalWidth !== 0) {
                 ctx.drawImage(imgActual, jugador.x, jugador.y, jugador.ancho, jugador.alto);
             } else {
-                ctx.fillStyle = "#00a8a8"; // Respaldo asegurado
+                ctx.fillStyle = "#00a8a8";
                 ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
             }
 
+            // Objetivo
             let imgRival = (objetivo.estado === 'derrotado') ? imgGorilaDerrotado : imgGorilaObjetivo;
             if (imgRival.complete && imgRival.naturalWidth !== 0) {
                 ctx.drawImage(imgRival, objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
             } else {
-                ctx.fillStyle = (objetivo.estado === 'derrotado') ? "#ffff54" : "#a80000"; // Respaldo asegurado
+                ctx.fillStyle = (objetivo.estado === 'derrotado') ? "#ffff54" : "#a80000";
                 ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
             }
 
@@ -391,7 +392,8 @@
             banana.x = jugador.x + 20;
             banana.y = jugador.y - 10;
             
-            const escalaFisica = canvas.width * 0.00025;
+            // ESCALA RETOCADA: Multiplicador ligeramente suavizado para dar máxima precisión de vuelo
+            const escalaFisica = canvas.width * 0.00028;
             banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
             banana.vy = -Math.sin(radianes) * velocidad * escalaFisica;
             banana.anguloRotacion = 0;
@@ -451,8 +453,6 @@
             return b.x > obj.x - 6 && b.x < obj.x + obj.ancho + 6 && b.y > obj.y - 6 && b.y < obj.y + obj.alto + 6;
         }
 
-        function processarFallo() {} // Función vacía eliminada por seguridad
-
         function procesarFallo() {
             banana.activa = false;
             jugador.estado = 'quieto';
@@ -470,7 +470,7 @@
                 }, 2000);
             } else {
                 document.getElementById("status-txt").innerText = "¡FALLASTE! CORRIGE TU TIRO";
-                dibujar(); // Redibuja al fallar para asegurar persistencia
+                dibujar();
             }
         }
 
@@ -490,7 +490,7 @@
             if (!contenedor) return;
             let textoBananas = "";
             for(let i = 0; i < 5; i++) {
-                textoBananas += (i < intentos) ? "🍌" : "⚫";
+                textoBananas += (i < intentos) ? "🍌" : "💩";
             }
             contenedor.innerHTML = textoBananas;
         }
@@ -500,7 +500,6 @@
             setTimeout(redimensionarCanvas, 300);
         });
 
-        // Asegurar renderizado inmediato
         setTimeout(redimensionarCanvas, 100);
 
         function alCargar() {
