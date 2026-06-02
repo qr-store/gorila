@@ -315,4 +315,201 @@
 
             // Edificios
             ctx.fillStyle = "rgba(70, 70, 70, 0.9)";
-            edificios.
+            edificios.forEach(e => {
+                ctx.fillRect(e.x, e.y, e.ancho, e.alto);
+            });
+
+            // Marca de impacto
+            if (ultimoImpacto.visible) {
+                ctx.fillStyle = "#ff0000";
+                ctx.fillRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
+                ctx.strokeStyle = "#ffffff";
+                ctx.strokeRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
+            }
+
+            // Jugador
+            let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
+            if (imgActual.complete && imgActual.naturalWidth !== 0) {
+                ctx.drawImage(imgActual, jugador.x, jugador.y, jugador.ancho, jugador.alto);
+            } else {
+                ctx.fillStyle = "#00a8a8";
+                ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
+            }
+
+            // Objetivo
+            let imgRival = (objetivo.estado === 'derrotado') ? imgGorilaDerrotado : imgGorilaObjetivo;
+            if (imgRival.complete && imgRival.naturalWidth !== 0) {
+                ctx.drawImage(imgRival, objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
+            } else {
+                ctx.fillStyle = (objetivo.estado === 'derrotado') ? "#ffff54" : "#a80000";
+                ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
+            }
+
+            // Banana
+            if (banana.activa) {
+                if (imgBanana.complete && imgBanana.naturalWidth !== 0) {
+                    ctx.save();
+                    ctx.translate(banana.x, banana.y);
+                    ctx.rotate(banana.anguloRotacion);
+                    ctx.drawImage(imgBanana, -20, -20, 40, 40);
+                    ctx.restore();
+                } else {
+                    ctx.save();
+                    ctx.translate(banana.x, banana.y);
+                    ctx.rotate(banana.anguloRotacion);
+                    ctx.fillStyle = "#ffff54";
+                    ctx.fillRect(-20, -20, 40, 40);
+                    ctx.restore();
+                }
+            }
+        }
+
+        function ajustar(tipo, valor) {
+            if (bloqueado) return;
+            iniciarAudio();
+            sonarRetro(400, 400, 0.04, 'triangle');
+            if (tipo === 'angulo') {
+                angulo = Math.max(0, Math.min(90, angulo + valor));
+                document.getElementById("angulo-val").innerText = angulo + "°";
+            } else if (tipo === 'velocidad') {
+                velocidad = Math.max(10, Math.min(120, velocidad + valor));
+                document.getElementById("velocidad-val").innerText = velocidad;
+            }
+            dibujar();
+        }
+
+        function lanzarBanana() {
+            if (banana.activa || bloqueado) return;
+            iniciarAudio();
+
+            banana.activa = true;
+            jugador.estado = 'lanza';
+            document.getElementById("status-txt").innerText = "¡BANANA VOLANDO!";
+            
+            sonarRetro(160, 580, 0.28, 'square');
+
+            const radianes = (angulo * Math.PI) / 180;
+            banana.x = jugador.x + 20;
+            banana.y = jugador.y - 10;
+            
+            const escalaFisica = canvas.width * 0.00028;
+            banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
+            banana.vy = -Math.sin(radianes) * velocidad * escalaFisica;
+            banana.anguloRotacion = 0;
+
+            actualizarFisica();
+        }
+
+        function actualizarFisica() {
+            if (!banana.activa) return;
+
+            banana.x += banana.vx;
+            banana.vy += gravedad;
+            banana.y += banana.vy;
+            banana.anguloRotacion += 0.18;
+
+            if (banana.x < 0 || banana.x > canvas.width || banana.y > canvas.height) {
+                ultimoImpacto.visible = false;
+                procesarFallo();
+                return;
+            }
+
+            if (detectarColision(banana, objetivo)) {
+                banana.activa = false;
+                bloqueado = true;
+                objetivo.estado = 'derrotado';
+                ultimoImpacto.visible = false;
+                
+                dibujar();
+                sonarRetro(300, 40, 1.2, 'sawtooth');
+                document.getElementById("status-txt").innerText = "💥 ¡K.O. DIRECTO! ¡GANASTE! 💥";
+                
+                setTimeout(() => {
+                    bloqueado = false;
+                    edificios = []; 
+                    reiniciarTodoElJuego();
+                }, 2500);
+                return;
+            }
+
+            for (let e of edificios) {
+                if (banana.x > e.x && banana.x < e.x + e.ancho && banana.y > e.y) {
+                    sonarRetro(110, 50, 0.18, 'triangle');
+                    ultimoImpacto.x = banana.x;
+                    ultimoImpacto.y = banana.y;
+                    ultimoImpacto.visible = true;
+                    procesarFallo();
+                    return;
+                }
+            }
+
+            dibujar();
+            requestAnimationFrame(actualizarFisica);
+        }
+
+        function detectarColision(b, obj) {
+            if (obj.estado === 'derrotado') return false;
+            return b.x > obj.x - 6 && b.x < obj.x + obj.ancho + 6 && b.y > obj.y - 6 && b.y < obj.y + obj.alto + 6;
+        }
+
+        function procesarFallo() {
+            banana.activa = false;
+            jugador.estado = 'quieto';
+            intentos--;
+            actualizarHUD();
+
+            if (intentos <= 0) {
+                bloqueado = true;
+                document.getElementById("status-txt").innerText = "¡GAME OVER! REGENERANDO...";
+                sonarRetro(90, 45, 1.1, 'square');
+                setTimeout(() => {
+                    bloqueado = false;
+                    edificios = [];
+                    reiniciarTodoElJuego();
+                }, 2000);
+            } else {
+                document.getElementById("status-txt").innerText = "¡FALLASTE! CORRIGE TU TIRO";
+                dibujar();
+            }
+        }
+
+        function reiniciarTodoElJuego() {
+            banana.activa = false;
+            jugador.estado = 'quieto';
+            objetivo.estado = 'vivo';
+            intentos = 5;
+            ultimoImpacto.visible = false;
+            actualizarHUD();
+            document.getElementById("status-txt").innerText = "¡NUEVO MAPA! APUNTA";
+            redimensionarCanvas();
+        }
+
+        function actualizarHUD() {
+            const contenedor = document.getElementById("marcador-bananas");
+            if (!contenedor) return;
+            let textoBananas = "";
+            for(let i = 0; i < 5; i++) {
+                textoBananas += (i < intentos) ? "🍌" : "💩";
+            }
+            contenedor.innerHTML = textoBananas;
+        }
+
+        window.addEventListener('resize', redimensionarCanvas);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(redimensionarCanvas, 300);
+        });
+
+        setTimeout(redimensionarCanvas, 100);
+
+        function alCargar() {
+            actualizarHUD();
+            dibujar();
+        }
+        imgGorilaQuieto.onload = alCargar;
+        imgGorilaLanza = alCargar;
+        imgGorilaObjetivo.onload = alCargar;
+        imgGorilaDerrotado.onload = alCargar;
+        imgBanana.onload = alCargar;
+    </script>
+</body>
+</html>
