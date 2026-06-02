@@ -186,8 +186,8 @@
             <div class="label-control">Ángulo</div>
             <div id="angulo-val" class="valor-control">45°</div>
             <div class="botones-ajuste">
-                <button class="btn-accion" onclick="ajustar('angulo', -5)">-</button>
-                <button class="btn-accion" onclick="ajustar('angulo', 5)">+</button>
+                <button class="btn-accion" onclick="ajustar('angulo', -1)">-</button>
+                <button class="btn-accion" onclick="ajustar('angulo', 1)">+</button>
             </div>
         </div>
 
@@ -199,13 +199,13 @@
             <div class="label-control">Velocidad</div>
             <div id="velocidad-val" class="valor-control">40</div>
             <div class="botones-ajuste">
-                <button class="btn-accion" onclick="ajustar('velocidad', -5)">-</button>
-                <button class="btn-accion" onclick="ajustar('velocidad', 5)">+</button>
+                <button class="btn-accion" onclick="ajustar('velocidad', -1)">-</button>
+                <button class="btn-accion" onclick="ajustar('velocidad', 1)">+</button>
             </div>
         </div>
     </div>
 
-    <script>
+    <script {
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const container = document.getElementById("canvas-container");
@@ -244,7 +244,7 @@
 
         let intentos = 5;
         let angulo = 45;
-        let velocidad = 40; // NUEVO: Arranca en 40 para un ajuste inicial más suave
+        let velocidad = 40; 
         let edificios = [];
         let bloqueado = false;
         
@@ -392,7 +392,6 @@
             banana.x = jugador.x + 20;
             banana.y = jugador.y - 10;
             
-            // ESCALA RETOCADA: Multiplicador ligeramente suavizado para dar máxima precisión de vuelo
             const escalaFisica = canvas.width * 0.00028;
             banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
             banana.vy = -Math.sin(radianes) * velocidad * escalaFisica;
@@ -485,6 +484,7 @@
             redimensionarCanvas();
         }
 
+        // CORREGIDO: Marcador divertido con caca (💩) para tiros fallidos
         function actualizarHUD() {
             const contenedor = document.getElementById("marcador-bananas");
             if (!contenedor) return;
