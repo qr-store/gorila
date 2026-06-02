@@ -248,8 +248,8 @@
         let edificios = [];
         let bloqueado = false;
         
-        let indiceEdificioJugador = 1;
-        let indiceEdificioObjetivo = 3;
+        let indiceEdificioJugador = 0;
+        let indiceEdificioObjetivo = 2;
 
         let jugador = { x: 0, y: 0, ancho: 40, alto: 40, estado: 'quieto' };
         let objetivo = { x: 0, y: 0, ancho: 40, alto: 40, estado: 'vivo' };
@@ -274,12 +274,13 @@
         function generarCiudad() {
             edificios = [];
             let xActual = 0;
-            const minAncho = 60;
-            const maxAncho = 100;
+            // MODIFICADO: Medidas optimizadas para rascacielos delgados en celulares verticales
+            const minAncho = 45; 
+            const maxAncho = 70;
 
             while (xActual < canvas.width) {
                 let anchoEdificio = Math.floor(Math.random() * (maxAncho - minAncho)) + minAncho;
-                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.4)) + (canvas.height * 0.2);
+                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.45)) + (canvas.height * 0.15);
                 
                 if (xActual + anchoEdificio > canvas.width) {
                     anchoEdificio = canvas.width - xActual;
@@ -294,10 +295,13 @@
                 xActual += anchoEdificio;
             }
 
+            // Selección aleatoria considerando el nuevo volumen de edificios delgados
             if (edificios.length > 3) {
-                indiceEdificioJugador = Math.floor(Math.random() * Math.min(3, edificios.length - 2));
+                // El jugador puede aparecer en los primeros 3 edificios de la izquierda (índices 0, 1 o 2)
+                indiceEdificioJugador = Math.floor(Math.random() * Math.min(3, edificios.length - 3));
                 
-                let minIndicesFaltantes = indiceEdificioJugador + 2;
+                // El objetivo se ubica dejando al menos 2 edificios delgados de separación en el medio
+                let minIndicesFaltantes = indiceEdificioJugador + 3;
                 let rangoDisponible = edificios.length - minIndicesFaltantes;
                 
                 indiceEdificioObjetivo = minIndicesFaltantes + Math.floor(Math.random() * rangoDisponible);
@@ -405,8 +409,9 @@
             sonarRetro(160, 580, 0.28, 'square');
 
             const radianes = (angulo * Math.PI) / 180;
+            // Ajuste fino para que salga justo por encima del centro del gorila
             banana.x = jugador.x + 20;
-            banana.y = jugador.y - 10;
+            banana.y = jugador.y - 15; 
             
             const escalaFisica = canvas.width * 0.00028;
             banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
@@ -420,7 +425,7 @@
             if (!banana.activa) return;
 
             banana.x += banana.vx;
-            banana.vy += gravedad; // Línea corregida al 100%
+            banana.vy += gravedad;
             banana.y += banana.vy;
             banana.anguloRotacion += 0.18;
 
