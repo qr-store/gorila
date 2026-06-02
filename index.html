@@ -1,27 +1,230 @@
-<html>
+<!DOCTYPE html>
+<html lang="es">
 <head>
-<title>ALMA DE ADOBE ::: RESTAURANTE LA SERENA</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<style type="text/css">
-body {
-	background-color: #5F3B21;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Gorillas Clon</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0000a8; /* Azul clásico de DOS */
+            color: #ffffff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #controles {
+            margin-bottom: 10px;
+            background: #000;
+            padding: 10px;
+            border: 2px solid #fff;
+        }
+        canvas {
+            border: 4px solid #fff;
+            background-color: #0000a8;
+        }
+        input, button {
+            background: #000;
+            color: #fff;
+            border: 1px solid #fff;
+            padding: 5px;
+            font-family: monospace;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+        }
+    </style>
 </head>
-<body leftmargin="0" topmargin="0" marginwidth="0" marginheight="0">
-<audio src="MONTAÑA.MP3" controls autoplay loop></audio>
-<table width="900" height="1740" border="0" align="center" cellpadding="0" cellspacing="0" id="Tabla_01">
-	<tr>
-		<td>
-		  <img src="index-01.jpg" alt="" width="900" height="1740" usemap="#Map" border="0"></td>
-	</tr>
-</table>
-<!-- End Save for Web Slices -->
+<body>
 
-<map name="Map"><area shape="rect" coords="78,352,831,470" href="menu.pdf" target="_blank"><area shape="rect" coords="487,509,818,628" href="https://www.facebook.com" target="_blank">
-  <area shape="rect" coords="54,813,662,983" href="https://wa.me/+56991081769?text=Hola. Necesito contactarlos." target="_blank">
-  <area shape="rect" coords="84,500,415,619" href="https://www.instagram.com" target="_blank">
-  <area shape="rect" coords="88,653,865,788" href="https://maps.app.goo.gl/ddXjkRcmqM1nRUeX7" target="_blank">
-</map>
+    <div id="controles">
+        <span id="turno-texto">Turno: Jugador 1</span> | 
+        Ángulo (0-90): <input type="number" id="angulo" value="45" min="0" max="90" style="width: 50px;">
+        Velocidad: <input type="number" id="velocidad" value="60" min="1" max="150" style="width: 50px;">
+        <button onclick="lanzarBanana()">¡Lanzar!</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Estado del juego
+        let turno = 1; // 1 = Izquierda, 2 = Derecha
+        let edificios = [];
+        let jugador1 = { x: 0, y: 0, ancho: 30, alto: 30 };
+        let jugador2 = { x: 0, y: 0, ancho: 30, alto: 30 };
+        
+        let banana = { x: 0, y: 0, vx: 0, vy: 0, activa: false };
+        const gravedad = 0.2;
+
+        // 1. Generar la ciudad (Edificios)
+        function generarCiudad() {
+            edificios = [];
+            let xActual = 0;
+            while (xActual < canvas.width) {
+                let anchoEdificio = Math.floor(Math.random() * 60) + 60;
+                let altoEdificio = Math.floor(Math.random() * 250) + 150;
+                
+                // Asegurar que no se pase del ancho del canvas
+                if (xActual + anchoEdificio > canvas.width) {
+                    anchoEdificio = canvas.width - xActual;
+                }
+
+                edificios.push({
+                    x: xActual,
+                    y: canvas.height - altoEdificio,
+                    ancho: anchoEdificio,
+                    alto: altoEdificio
+                });
+                xActual += anchoEdificio;
+            }
+
+            // Colocar los gorilas sobre los edificios de los extremos
+            let edifIzq = edificios[1];
+            jugador1.x = edifIzq.x + (edifIzq.ancho / 2) - 15;
+            jugador1.y = edifIzq.y - 30;
+
+            let edifDer = edificios[edificios.length - 2];
+            jugador2.x = edifDer.x + (edifDer.ancho / 2) - 15;
+            jugador2.y = edifDer.y - 30;
+        }
+
+        // 2. Dibujar todo en el Canvas
+        function dibujar() {
+            // Limpiar pantalla
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar edificios
+            ctx.fillStyle = "#a8a8a8"; // Gris
+            edificios.forEach(e => {
+                ctx.fillRect(e.x, e.y, e.ancho, e.alto);
+                // Ventanas básicas para el look retro
+                ctx.fillStyle = "#ffff54"; // Amarillo ventanas
+                for (let vx = e.x + 10; vx < e.x + e.ancho - 10; vx += 20) {
+                    for (let vy = e.y + 10; vy < canvas.height - 10; vy += 30) {
+                        if (Math.random() > 0.3) ctx.fillRect(vx, vy, 8, 12);
+                    }
+                }
+                ctx.fillStyle = "#a8a8a8";
+            });
+
+            // Dibujar Gorila 1 (Rojo)
+            ctx.fillStyle = "#a80000";
+            ctx.fillRect(jugador1.x, jugador1.y, jugador1.ancho, jugador1.alto);
+
+            // Dibujar Gorila 2 (Verde)
+            ctx.fillStyle = "#00a800";
+            ctx.fillRect(jugador2.x, jugador2.y, jugador2.ancho, jugador2.alto);
+
+            // Dibujar Banana si está en el aire
+            if (banana.activa) {
+                ctx.fillStyle = "#ffff54"; // Amarillo banana
+                ctx.beginPath();
+                ctx.arc(banana.x, banana.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 3. Lógica del lanzamiento
+        function lanzarBanana() {
+            if (banana.activa) return; // No lanzar si ya hay una en el aire
+
+            const anguloGrados = parseFloat(document.getElementById("angulo").value);
+            const velocidad = parseFloat(document.getElementById("velocidad").value) * 0.15; // Escalar velocidad
+
+            // Convertir a radianes para las funciones matemáticas
+            const radianes = (anguloGrados * Math.PI) / 180;
+
+            banana.activa = true;
+
+            if (turno === 1) {
+                banana.x = jugador1.x + 15;
+                banana.y = jugador1.y - 10;
+                banana.vx = Math.cos(radianes) * velocidad;
+                banana.vy = -Math.sin(radianes) * velocidad;
+            } else {
+                banana.x = jugador2.x + 15;
+                banana.y = jugador2.y - 10;
+                // Hacia la izquierda el ángulo se invierte
+                banana.vx = -Math.cos(radianes) * velocidad;
+                banana.vy = -Math.sin(radianes) * velocidad;
+            }
+
+            actualizarFisica();
+        }
+
+        // 4. Bucle de animación de la banana
+        function actualizarFisica() {
+            if (!banana.activa) return;
+
+            // Aplicar movimiento físico básico
+            banana.x += banana.vx;
+            banana.vy += gravedad; // La gravedad tira hacia abajo
+            banana.y += banana.vy;
+
+            // Verificar si se salió de los lados o del fondo
+            if (banana.x < 0 || banana.x > canvas.width || banana.y > canvas.height) {
+                finalizarTurno("¡Fallo afuera del mapa!");
+                return;
+            }
+
+            // Colisión con Gorila 1
+            if (detectarColision(banana, jugador1)) {
+                alert("¡Jugador 2 Gana!");
+                reiniciarJuego();
+                return;
+            }
+
+            // Colisión con Gorila 2
+            if (detectarColision(banana, jugador2)) {
+                alert("¡Jugador 1 Gana!");
+                reiniciarJuego();
+                return;
+            }
+
+            // Colisión con edificios
+            for (let e of edificios) {
+                if (banana.x > e.x && banana.x < e.x + e.ancho && banana.y > e.y) {
+                    finalizarTurno("Impacto en un edificio.");
+                    return;
+                }
+            }
+
+            dibujar();
+            requestAnimationFrame(actualizarFisica);
+        }
+
+        function detectarColision(b, j) {
+            return b.x > j.x && b.x < j.x + j.ancho && b.y > j.y && b.y < j.y + j.alto;
+        }
+
+        function finalizarTurno(mensaje) {
+            banana.activa = false;
+            turno = turno === 1 ? 2 : 1;
+            document.getElementById("turno-texto").innerText = `Turno: Jugador ${turno}`;
+            dibujar();
+        }
+
+        function reiniciarJuego() {
+            banana.activa = false;
+            turno = 1;
+            document.getElementById("turno-texto").innerText = "Turno: Jugador 1";
+            generarCiudad();
+            dibujar();
+        }
+
+        // Iniciar el juego por primera vez
+        generarCiudad();
+        dibujar();
+    </script>
 </body>
 </html>
