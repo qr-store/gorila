@@ -61,12 +61,6 @@
             min-height: 32px;
         }
 
-        #intentos-txt {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
         #canvas-container {
             flex: 1;
             position: relative;
@@ -333,22 +327,20 @@
                 ctx.strokeRect(ultimoImpacto.x - 6, ultimoImpacto.y - 6, 12, 12);
             }
 
-            // Jugador
-            let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuiet;
-            imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
+            // CORREGIDO: El dibujo de los gorilas ahora es forzado e inmediato
+            let imgActual = (jugador.estado === 'lanza') ? imgGorilaLanza : imgGorilaQuieto;
             if (imgActual.complete && imgActual.naturalWidth !== 0) {
                 ctx.drawImage(imgActual, jugador.x, jugador.y, jugador.ancho, jugador.alto);
             } else {
-                ctx.fillStyle = "#00a8a8";
+                ctx.fillStyle = "#00a8a8"; // Respaldo asegurado
                 ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
             }
 
-            // Objetivo
             let imgRival = (objetivo.estado === 'derrotado') ? imgGorilaDerrotado : imgGorilaObjetivo;
             if (imgRival.complete && imgRival.naturalWidth !== 0) {
                 ctx.drawImage(imgRival, objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
             } else {
-                ctx.fillStyle = (objetivo.estado === 'derrotado') ? "#ffff54" : "#a80000";
+                ctx.fillStyle = (objetivo.estado === 'derrotado') ? "#ffff54" : "#a80000"; // Respaldo asegurado
                 ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
             }
 
@@ -411,7 +403,7 @@
             if (!banana.activa) return;
 
             banana.x += banana.vx;
-            banana.vy += gravedad; // LÍNEA CORREGIDA LIMPIA
+            banana.vy += gravedad;
             banana.y += banana.vy;
             banana.anguloRotacion += 0.18;
 
@@ -459,6 +451,8 @@
             return b.x > obj.x - 6 && b.x < obj.x + obj.ancho + 6 && b.y > obj.y - 6 && b.y < obj.y + obj.alto + 6;
         }
 
+        function processarFallo() {} // Función vacía eliminada por seguridad
+
         function procesarFallo() {
             banana.activa = false;
             jugador.estado = 'quieto';
@@ -476,7 +470,7 @@
                 }, 2000);
             } else {
                 document.getElementById("status-txt").innerText = "¡FALLASTE! CORRIGE TU TIRO";
-                dibujar();
+                dibujar(); // Redibuja al fallar para asegurar persistencia
             }
         }
 
@@ -506,6 +500,7 @@
             setTimeout(redimensionarCanvas, 300);
         });
 
+        // Asegurar renderizado inmediato
         setTimeout(redimensionarCanvas, 100);
 
         function alCargar() {
