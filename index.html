@@ -2,79 +2,192 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Gorillas Clon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gorillas Mobile - 1 Jugador</title>
     <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
         body {
             margin: 0;
-            background-color: #0000a8; /* Azul clásico de DOS */
+            padding: 0;
+            background-color: #0000a8; /* Azul clásico */
             color: #ffffff;
             font-family: monospace;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
             overflow: hidden;
         }
-        #controles {
-            margin-bottom: 10px;
-            background: #000;
-            padding: 10px;
-            border: 2px solid #fff;
+        
+        /* Encabezado con estado del juego */
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            font-weight: bold;
+        }
+
+        /* Contenedor del área de juego */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            background: #0000a8;
         }
         canvas {
-            border: 4px solid #fff;
-            background-color: #0000a8;
+            display: block;
+            width: 100%;
+            height: 100%;
         }
-        input, button {
-            background: #000;
+
+        /* Panel de control inferior optimizado para pulgares */
+        #controles-tactiles {
+            background: #111;
+            border-top: 4px solid #fff;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            min-height: 160px;
+        }
+
+        .columna-control {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .label-control {
+            font-size: 14px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .valor-control {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffff54;
+        }
+
+        .botones-ajuste {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        /* Botones grandes para celular */
+        .btn-accion {
+            flex: 1;
+            padding: 15px 0;
+            font-size: 24px;
+            font-weight: bold;
+            background: #222;
             color: #fff;
-            border: 1px solid #fff;
-            padding: 5px;
-            font-family: monospace;
-            margin-right: 10px;
+            border: 3px solid #fff;
+            border-radius: 8px;
+            touch-action: manipulation;
         }
-        button:hover {
+        .btn-accion:active {
             background: #fff;
             color: #000;
-            cursor: pointer;
+        }
+
+        /* Botón de disparo gigante */
+        .btn-fuego {
+            width: 100%;
+            height: 100%;
+            background: #a80000;
+            color: #fff;
+            border: 4px solid #fff;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: bold;
+            text-transform: uppercase;
+            touch-action: manipulation;
+        }
+        .btn-fuego:active {
+            background: #ffff54;
+            color: #000;
         }
     </style>
 </head>
 <body>
 
-    <div id="controles">
-        <span id="turno-texto">Turno: Jugador 1</span> | 
-        Ángulo (0-90): <input type="number" id="angulo" value="45" min="0" max="90" style="width: 50px;">
-        Velocidad: <input type="number" id="velocidad" value="60" min="1" max="150" style="width: 50px;">
-        <button onclick="lanzarBanana()">¡Lanzar!</button>
+    <div id="hud">
+        <div id="intentos-txt">INTENTOS: ❤️❤️❤️</div>
+        <div id="status-txt">¡APUNTA Y FUEGO!</div>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="controles-tactiles">
+        <div class="columna-control">
+            <div class="label-control">Ángulo</div>
+            <div id="angulo-val" class="valor-control">45°</div>
+            <div class="botones-ajuste">
+                <button class="btn-accion" onclick="ajustar('angulo', -5)">-</button>
+                <button class="btn-accion" onclick="ajustar('angulo', 5)">+</button>
+            </div>
+        </div>
+
+        <div class="columna-control">
+            <button class="btn-fuego" onclick="lanzarBanana()">¡FUEGO!</button>
+        </div>
+
+        <div class="columna-control">
+            <div class="label-control">Velocidad</div>
+            <div id="velocidad-val" class="valor-control">60</div>
+            <div class="botones-ajuste">
+                <button class="btn-accion" onclick="ajustar('velocidad', -5)">-</button>
+                <button class="btn-accion" onclick="ajustar('velocidad', 5)">+</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const container = document.getElementById("canvas-container");
 
-        // Estado del juego
-        let turno = 1; // 1 = Izquierda, 2 = Derecha
+        // Variables de lógica de 1 jugador
+        let intentos = 3;
+        let angulo = 45;
+        let velocidad = 60;
+
         let edificios = [];
-        let jugador1 = { x: 0, y: 0, ancho: 30, alto: 30 };
-        let jugador2 = { x: 0, y: 0, ancho: 30, alto: 30 };
-        
+        let jugador = { x: 0, y: 0, ancho: 24, alto: 24 };
+        let objetivo = { x: 0, y: 0, ancho: 24, alto: 24 };
         let banana = { x: 0, y: 0, vx: 0, vy: 0, activa: false };
-        const gravedad = 0.2;
+        const gravedad = 0.15;
 
-        // 1. Generar la ciudad (Edificios)
+        // Ajustar el tamaño del canvas dinámicamente según la pantalla del celular
+        function redimensionarCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            generarCiudad();
+            dibujar();
+        }
+
+        // Generar edificios adaptados al ancho disponible
         function generarCiudad() {
             edificios = [];
             let xActual = 0;
+            const minAncho = 50;
+            const maxAncho = 90;
+
             while (xActual < canvas.width) {
-                let anchoEdificio = Math.floor(Math.random() * 60) + 60;
-                let altoEdificio = Math.floor(Math.random() * 250) + 150;
+                let anchoEdificio = Math.floor(Math.random() * (maxAncho - minAncho)) + minAncho;
+                let altoEdificio = Math.floor(Math.random() * (canvas.height * 0.5)) + (canvas.height * 0.25);
                 
-                // Asegurar que no se pase del ancho del canvas
                 if (xActual + anchoEdificio > canvas.width) {
                     anchoEdificio = canvas.width - xActual;
                 }
@@ -88,113 +201,102 @@
                 xActual += anchoEdificio;
             }
 
-            // Colocar los gorilas sobre los edificios de los extremos
-            let edifIzq = edificios[1];
-            jugador1.x = edifIzq.x + (edifIzq.ancho / 2) - 15;
-            jugador1.y = edifIzq.y - 30;
+            // El jugador se ubica en el segundo edificio
+            if(edificios.length > 3) {
+                let eJugador = edificios[1];
+                jugador.x = eJugador.x + (eJugador.ancho / 2) - 12;
+                jugador.y = eJugador.y - 24;
 
-            let edifDer = edificios[edificios.length - 2];
-            jugador2.x = edifDer.x + (edifDer.ancho / 2) - 15;
-            jugador2.y = edifDer.y - 30;
+                // El objetivo se ubica en el penúltimo edificio
+                let eObjetivo = edificios[edificios.length - 2];
+                objetivo.x = eObjetivo.x + (eObjetivo.ancho / 2) - 12;
+                objetivo.y = eObjetivo.y - 24;
+            }
         }
 
-        // 2. Dibujar todo en el Canvas
         function dibujar() {
-            // Limpiar pantalla
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Dibujar edificios
-            ctx.fillStyle = "#a8a8a8"; // Gris
+            ctx.fillStyle = "#a8a8a8";
             edificios.forEach(e => {
                 ctx.fillRect(e.x, e.y, e.ancho, e.alto);
-                // Ventanas básicas para el look retro
-                ctx.fillStyle = "#ffff54"; // Amarillo ventanas
-                for (let vx = e.x + 10; vx < e.x + e.ancho - 10; vx += 20) {
-                    for (let vy = e.y + 10; vy < canvas.height - 10; vy += 30) {
-                        if (Math.random() > 0.3) ctx.fillRect(vx, vy, 8, 12);
-                    }
-                }
-                ctx.fillStyle = "#a8a8a8";
             });
 
-            // Dibujar Gorila 1 (Rojo)
+            // Dibujar Jugador (Azul cyan)
+            ctx.fillStyle = "#00a8a8";
+            ctx.fillRect(jugador.x, jugador.y, jugador.ancho, jugador.alto);
+
+            // Dibujar Objetivo (Rojo)
             ctx.fillStyle = "#a80000";
-            ctx.fillRect(jugador1.x, jugador1.y, jugador1.ancho, jugador1.alto);
+            ctx.fillRect(objetivo.x, objetivo.y, objetivo.ancho, objetivo.alto);
 
-            // Dibujar Gorila 2 (Verde)
-            ctx.fillStyle = "#00a800";
-            ctx.fillRect(jugador2.x, jugador2.y, jugador2.ancho, jugador2.alto);
-
-            // Dibujar Banana si está en el aire
+            // Dibujar proyectil
             if (banana.activa) {
-                ctx.fillStyle = "#ffff54"; // Amarillo banana
+                ctx.fillStyle = "#ffff54";
                 ctx.beginPath();
-                ctx.arc(banana.x, banana.y, 5, 0, Math.PI * 2);
+                ctx.arc(banana.x, banana.y, 4, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        // 3. Lógica del lanzamiento
+        // Modificar parámetros con los botones táctiles (+ y -)
+        function ajustar(tipo, valor) {
+            if (tipo === 'angulo') {
+                angulo = Math.max(0, Math.min(90, angulo + valor));
+                document.getElementById("angulo-val").innerText = angulo + "°";
+            } else if (tipo === 'velocidad') {
+                velocidad = Math.max(10, Math.min(120, velocidad + valor));
+                document.getElementById("velocidad-val").innerText = velocidad;
+            }
+        }
+
         function lanzarBanana() {
-            if (banana.activa) return; // No lanzar si ya hay una en el aire
-
-            const anguloGrados = parseFloat(document.getElementById("angulo").value);
-            const velocidad = parseFloat(document.getElementById("velocidad").value) * 0.15; // Escalar velocidad
-
-            // Convertir a radianes para las funciones matemáticas
-            const radianes = (anguloGrados * Math.PI) / 180;
+            if (banana.activa) return;
 
             banana.activa = true;
+            document.getElementById("status-txt").innerText = "¡EN EL AIRE!";
 
-            if (turno === 1) {
-                banana.x = jugador1.x + 15;
-                banana.y = jugador1.y - 10;
-                banana.vx = Math.cos(radianes) * velocidad;
-                banana.vy = -Math.sin(radianes) * velocidad;
-            } else {
-                banana.x = jugador2.x + 15;
-                banana.y = jugador2.y - 10;
-                // Hacia la izquierda el ángulo se invierte
-                banana.vx = -Math.cos(radianes) * velocidad;
-                banana.vy = -Math.sin(radianes) * velocidad;
-            }
+            const radianes = (angulo * Math.PI) / 180;
+            banana.x = jugador.x + 12;
+            banana.y = jugador.y - 8;
+            
+            // Factor de escala adaptado dinámicamente al ancho de la pantalla
+            const escalaFisica = canvas.width * 0.00025;
+            banana.vx = Math.cos(radianes) * velocidad * escalaFisica;
+            banana.vy = -Math.sin(radianes) * velocidad * escalaFisica;
 
             actualizarFisica();
         }
 
-        // 4. Bucle de animación de la banana
         function actualizarFisica() {
             if (!banana.activa) return;
 
-            // Aplicar movimiento físico básico
             banana.x += banana.vx;
-            banana.vy += gravedad; // La gravedad tira hacia abajo
+            banana.vy += gravedad;
             banana.y += banana.vy;
 
-            // Verificar si se salió de los lados o del fondo
+            // Falla por salir del mapa
             if (banana.x < 0 || banana.x > canvas.width || banana.y > canvas.height) {
-                finalizarTurno("¡Fallo afuera del mapa!");
+                procesarFallo();
                 return;
             }
 
-            // Colisión con Gorila 1
-            if (detectarColision(banana, jugador1)) {
-                alert("¡Jugador 2 Gana!");
-                reiniciarJuego();
+            // Impacto en el objetivo (Victoria)
+            if (detectarColision(banana, objetivo)) {
+                document.getElementById("status-txt").innerText = "¡LE DISTE! GANASTE 🎉";
+                setTimeout(() => {
+                    intentos = 3;
+                    actualizarHUD();
+                    redimensionarCanvas(); 
+                }, 2000);
                 return;
             }
 
-            // Colisión con Gorila 2
-            if (detectarColision(banana, jugador2)) {
-                alert("¡Jugador 1 Gana!");
-                reiniciarJuego();
-                return;
-            }
-
-            // Colisión con edificios
+            // Choque contra un edificio
             for (let e of edificios) {
                 if (banana.x > e.x && banana.x < e.x + e.ancho && banana.y > e.y) {
-                    finalizarTurno("Impacto en un edificio.");
+                    procesarFallo();
                     return;
                 }
             }
@@ -203,28 +305,42 @@
             requestAnimationFrame(actualizarFisica);
         }
 
-        function detectarColision(b, j) {
-            return b.x > j.x && b.x < j.x + j.ancho && b.y > j.y && b.y < j.y + j.alto;
+        function detectarColision(b, obj) {
+            return b.x > obj.x && b.x < obj.x + obj.ancho && b.y > obj.y && b.y < obj.y + obj.alto;
         }
 
-        function finalizarTurno(mensaje) {
+        function procesarFallo() {
             banana.activa = false;
-            turno = turno === 1 ? 2 : 1;
-            document.getElementById("turno-texto").innerText = `Turno: Jugador ${turno}`;
-            dibujar();
+            intentos--;
+            actualizarHUD();
+
+            if (intentos <= 0) {
+                document.getElementById("status-txt").innerText = "¡GAME OVER! REINICIANDO...";
+                setTimeout(() => {
+                    intentos = 3;
+                    actualizarHUD();
+                    redimensionarCanvas(); // Recrea toda la ciudad y posiciones
+                }, 2000);
+            } else {
+                document.getElementById("status-txt").innerText = "¡FALLASTE! INTENTA OTRA VEZ";
+                dibujar();
+            }
         }
 
-        function reiniciarJuego() {
-            banana.activa = false;
-            turno = 1;
-            document.getElementById("turno-texto").innerText = "Turno: Jugador 1";
-            generarCiudad();
-            dibujar();
+        function actualizarHUD() {
+            let corazones = "";
+            for(let i=0; i<3; i++) {
+                corazones += (i < intentos) ? "❤️" : "🖤";
+            }
+            document.getElementById("intentos-txt").innerText = `INTENTOS: ${corazones}`;
         }
 
-        // Iniciar el juego por primera vez
-        generarCiudad();
-        dibujar();
+        // Oyentes de eventos para redimensionar la app correctamente
+        window.addEventListener('resize', redimensionarCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(redimensionarCanvas, 200));
+
+        // Inicialización
+        redimensionarCanvas();
     </script>
 </body>
 </html>
